@@ -1,21 +1,52 @@
 name: GitHub Actions Demo
 run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
-on: [push]
+
+on:
+  workflow_dispatch:
+
 jobs:
   Explore-GitHub-Actions:
     runs-on: ubuntu-latest
     steps:
-      - run: apt update
-      - run: apt install build-essential bc bison flex libncurses5-dev libssl-dev gcc-aarch64-linux-gnu lz4
-      - run: git clone https://github.com/kerneltoast/android_kernel_google_zuma.git
-      - run: cd ./android_kernel_google_zuma
-      - run: make zuma_defconf
-      - run: make -j$(nproc)
-      - run: cd ./out/google-modules/soc/gs/arch/arm64/boot/dts/google
-      - run: cat *.dtb > dtb
-      - run: cp ./dtb ../../../../../..
-      - run: cd ~/android_kernel_google_zuma
-      - run: cd ../../../../../../..
-      - run: 
-      - run: 
-      - run: 
+      - name: Update and install dependencies
+        run: |
+          apt update
+          apt install -y build-essential bc bison flex libncurses5-dev libssl-dev gcc-aarch64-linux-gnu lz4 zip
+
+      - name: Clone repositories
+        run: |
+          git clone https://github.com/kerneltoast/android_kernel_google_zuma.git
+          git clone https://github.com/TheWildJames/SultanSU.git
+
+      - name: Compile the kernel
+        run: |
+          cd ./android_kernel_google_zuma
+          make zuma_defconfig
+          make -j$(nproc)
+
+      - name: Concatenate DTB files
+        run: |
+          cd ./android_kernel_google_zuma/out/google-modules/soc/gs/arch/arm64/boot/dts/google
+          cat *.dtb > dtb
+          cp dtb ~/SultanSU/anykernel/
+
+      - name: Copy Image.lz4
+        run: cp ./android_kernel_google_zuma/out/arch/arm64/boot/Image.lz4 ~/SultanSU/anykernel/
+
+      - name: Zip files in SultanSU/anykernel directory
+        run: |
+          cd ~/SultanSU/anykernel
+          zip -r ../SultanSU_$(date +'%Y-%m-%d').zip ./
+
+      - name: Create a Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: "release-$(date +'%Y-%m-%d')"
+          release_name: "SultanSU Release $(date +'%Y-%m-%d')"
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
