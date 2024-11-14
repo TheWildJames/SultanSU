@@ -62,7 +62,6 @@ jobs:
           release_name: "SultanSU Release $(date +'%Y-%m-%d')"
           draft: false
           prerelease: false
-        run: echo "Release created."
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
@@ -73,4 +72,3 @@ jobs:
           asset_path: ./SultanSU_$(date +'%Y-%m-%d').zip
           asset_name: SultanSU_$(date +'%Y-%m-%d').zip
           asset_content_type: application/zip
-        run: echo "Release asset uploaded."
