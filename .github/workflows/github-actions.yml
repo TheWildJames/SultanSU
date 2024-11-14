@@ -10,33 +10,47 @@ jobs:
     steps:
       - name: Update and install dependencies
         run: |
+          echo "Updating package lists and installing dependencies..."
           apt update
           apt install -y build-essential bc bison flex libncurses5-dev libssl-dev gcc-aarch64-linux-gnu lz4 zip
+          echo "Dependencies installed."
 
       - name: Clone repositories
         run: |
+          echo "Cloning android_kernel_google_zuma repository..."
           git clone https://github.com/kerneltoast/android_kernel_google_zuma.git
+          echo "Cloning SultanSU repository..."
           git clone https://github.com/TheWildJames/SultanSU.git
+          echo "Repositories cloned."
 
       - name: Compile the kernel
         run: |
+          echo "Starting kernel compilation..."
           cd ./android_kernel_google_zuma
           make zuma_defconfig
           make -j$(nproc)
+          echo "Kernel compilation completed."
 
       - name: Concatenate DTB files
         run: |
+          echo "Concatenating DTB files..."
           cd ./android_kernel_google_zuma/out/google-modules/soc/gs/arch/arm64/boot/dts/google
           cat *.dtb > dtb
           cp dtb ~/SultanSU/anykernel/
+          echo "DTB files concatenated and copied."
 
       - name: Copy Image.lz4
-        run: cp ./android_kernel_google_zuma/out/arch/arm64/boot/Image.lz4 ~/SultanSU/anykernel/
+        run: |
+          echo "Copying Image.lz4 to anykernel directory..."
+          cp ./android_kernel_google_zuma/out/arch/arm64/boot/Image.lz4 ~/SultanSU/anykernel/
+          echo "Image.lz4 copied."
 
       - name: Zip files in SultanSU/anykernel directory
         run: |
+          echo "Creating zip file for release..."
           cd ~/SultanSU/anykernel
           zip -r ../SultanSU_$(date +'%Y-%m-%d').zip ./
+          echo "Zip file created."
 
       - name: Create a Release
         id: create_release
@@ -48,5 +62,15 @@ jobs:
           release_name: "SultanSU Release $(date +'%Y-%m-%d')"
           draft: false
           prerelease: false
+        run: echo "Release created."
 
       - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./SultanSU_$(date +'%Y-%m-%d').zip
+          asset_name: SultanSU_$(date +'%Y-%m-%d').zip
+          asset_content_type: application/zip
+        run: echo "Release asset uploaded."
