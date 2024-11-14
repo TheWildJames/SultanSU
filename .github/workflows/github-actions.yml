@@ -1,56 +1,71 @@
-name: GitHub Actions Demo
+name: GitHub Actions Kernel Build Demo
 run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
 
 on:
   workflow_dispatch:
 
 jobs:
-  Explore-GitHub-Actions:
+  Build-Kernel:
     runs-on: ubuntu-latest
+    timeout-minutes: 60  # Extend if needed for large builds
     steps:
-      - name: Update and install dependencies
+      - name: Update and Install Dependencies
         run: |
-          echo "Updating package lists and installing dependencies..."
+          set -ex
+          echo "Updating package lists and installing necessary dependencies..."
           sudo apt update
           sudo apt install -y build-essential bc bison flex libncurses5-dev libssl-dev gcc-aarch64-linux-gnu lz4 zip
           echo "Dependencies installed."
 
-      - name: Clone repositories
+      - name: Clone Repositories
         run: |
+          set -ex
           echo "Cloning android_kernel_google_zuma repository..."
           git clone https://github.com/kerneltoast/android_kernel_google_zuma.git
           echo "Cloning SultanSU repository..."
           git clone https://github.com/TheWildJames/SultanSU.git
-          echo "Repositories cloned."
+          echo "Repositories cloned successfully."
 
-      - name: Compile the kernel
+      - name: Setup KernelSU
         run: |
-          echo "Starting kernel compilation..."
-          cd ./android_kernel_google_zuma
+          set -ex
+          echo "Running KernelSU setup script..."
+          cd android_kernel_google_zuma
+          curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
+          echo "KernelSU setup completed."
+
+      - name: Compile the Kernel
+        run: |
+          set -ex
+          echo "Starting kernel compilation with limited threads to avoid memory issues..."
+          cd android_kernel_google_zuma
           make zuma_defconfig
-          make -j$(nproc)
-          echo "Kernel compilation completed."
+          make -j2  # Limit threads to 2
+          echo "Kernel compilation completed successfully."
 
-      - name: Concatenate DTB files
+      - name: Concatenate DTB Files
         run: |
+          set -ex
           echo "Concatenating DTB files..."
-          cd ./android_kernel_google_zuma/out/google-modules/soc/gs/arch/arm64/boot/dts/google
+          cd out/google-modules/soc/gs/arch/arm64/boot/dts/google
           cat *.dtb > dtb
           cp dtb ~/SultanSU/anykernel/
           echo "DTB files concatenated and copied."
 
       - name: Copy Image.lz4
         run: |
+          set -ex
           echo "Copying Image.lz4 to anykernel directory..."
-          cp ./android_kernel_google_zuma/out/arch/arm64/boot/Image.lz4 ~/SultanSU/anykernel/
-          echo "Image.lz4 copied."
+          cp ../arch/arm64/boot/Image.lz4 ~/SultanSU/anykernel/
+          echo "Image.lz4 copied successfully."
 
-      - name: Zip files in SultanSU/anykernel directory
+      - name: Zip Files in anykernel Directory
         run: |
+          set -ex
           echo "Creating zip file for release..."
           cd ~/SultanSU/anykernel
           zip -r ../SultanSU_$(date +'%Y-%m-%d').zip ./
-          echo "Zip file created."
+          echo "Zip file created successfully."
 
       - name: Create a Release
         id: create_release
