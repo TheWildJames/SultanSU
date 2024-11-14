@@ -11,8 +11,8 @@ jobs:
       - name: Update and install dependencies
         run: |
           echo "Updating package lists and installing dependencies..."
-          apt update
-          apt install -y build-essential bc bison flex libncurses5-dev libssl-dev gcc-aarch64-linux-gnu lz4 zip
+          sudo apt update
+          sudo apt install -y build-essential bc bison flex libncurses5-dev libssl-dev gcc-aarch64-linux-gnu lz4 zip
           echo "Dependencies installed."
 
       - name: Clone repositories
