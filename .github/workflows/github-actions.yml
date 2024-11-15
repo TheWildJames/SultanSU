@@ -14,7 +14,7 @@ jobs:
           set -ex
           echo "Updating package lists and installing necessary dependencies..."
           sudo apt update
-          sudo apt install -y build-essential bc bison flex libncurses5-dev libssl-dev gcc-aarch64-linux-gnu lz4 zip libelf-dev
+          sudo apt install -y build-essential bc bison flex libncurses5-dev libssl-dev gcc-aarch64-linux-gnu lz4 zip libelf-dev liblz4-tool liblzma-dev
           echo "Dependencies installed."
 
       - name: Clone Repositories
@@ -44,10 +44,10 @@ jobs:
       - name: Compile the Kernel with Detailed Logs
         run: |
           set -ex
-          echo "Starting kernel compilation with limited threads to avoid memory issues..."
+          echo "Starting kernel compilation with verbosity and limited threads..."
           cd android_kernel_google_zuma
           make zuma_defconfig
-          make -j2 2>&1 | tee build.log  # Save build log to check errors
+          make -j1 V=1 2>&1 | tee build.log
           echo "Kernel compilation completed."
 
       - name: Display Build Log (if exists)
@@ -55,48 +55,3 @@ jobs:
         run: |
           echo "Displaying the last 100 lines of the build log to diagnose the error."
           tail -n 100 build.log || echo "No build log found."
-
-      - name: Concatenate DTB Files
-        run: |
-          set -ex
-          echo "Concatenating DTB files..."
-          cd out/google-modules/soc/gs/arch/arm64/boot/dts/google
-          cat *.dtb > dtb
-          cp dtb ~/SultanSU/anykernel/
-          echo "DTB files concatenated and copied."
-
-      - name: Copy Image.lz4
-        run: |
-          set -ex
-          echo "Copying Image.lz4 to anykernel directory..."
-          cp ../arch/arm64/boot/Image.lz4 ~/SultanSU/anykernel/
-          echo "Image.lz4 copied successfully."
-
-      - name: Zip Files in anykernel Directory
-        run: |
-          set -ex
-          echo "Creating zip file for release..."
-          cd ~/SultanSU/anykernel
-          zip -r ../SultanSU_$(date +'%Y-%m-%d').zip ./
-          echo "Zip file created successfully."
-
-      - name: Create a Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: "release-$(date +'%Y-%m-%d')"
-          release_name: "SultanSU Release $(date +'%Y-%m-%d')"
-          draft: false
-          prerelease: false
-
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./SultanSU_$(date +'%Y-%m-%d').zip
-          asset_name: SultanSU_$(date +'%Y-%m-%d').zip
-          asset_content_type: application/zip
