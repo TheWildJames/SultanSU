@@ -1,5 +1,5 @@
-name: GitHub Actions Kernel Build Debugging
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
+name: GitHub Actions Kernel Build
+run-name: ${{ github.actor }} is building the kernel 🚀
 
 on:
   workflow_dispatch:
@@ -9,49 +9,24 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - name: Update and Install Dependencies
+      - name: Update and Upgrade Dependencies
         run: |
-          set -ex
-          echo "Updating package lists and installing necessary dependencies..."
           sudo apt update
+          sudo apt upgrade -y
           sudo apt install -y build-essential bc bison flex libncurses5-dev libssl-dev gcc-aarch64-linux-gnu lz4 zip libelf-dev liblz4-tool liblzma-dev
-          echo "Dependencies installed."
 
       - name: Clone Repositories
         run: |
-          set -ex
-          echo "Cloning android_kernel_google_zuma repository..."
           git clone https://github.com/kerneltoast/android_kernel_google_zuma.git
-          echo "Cloning SultanSU repository..."
           git clone https://github.com/TheWildJames/SultanSU.git
-          echo "Repositories cloned successfully."
 
       - name: Setup KernelSU
         run: |
-          set -ex
-          echo "Running KernelSU setup script..."
           cd android_kernel_google_zuma
           curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
-          echo "KernelSU setup completed."
 
-      - name: Check Resources
+      - name: Compile the Kernel
         run: |
-          echo "Checking disk space and memory availability..."
-          df -h
-          free -h
-          echo "Resources checked."
-
-      - name: Compile the Kernel with Detailed Logs
-        run: |
-          set -ex
-          echo "Starting kernel compilation with verbosity and limited threads..."
           cd android_kernel_google_zuma
           make zuma_defconfig
-          make -j1 V=1 2>&1 | tee build.log
-          echo "Kernel compilation completed."
-
-      - name: Display Build Log (if exists)
-        if: failure()
-        run: |
-          echo "Displaying the last 100 lines of the build log to diagnose the error."
-          tail -n 100 build.log || echo "No build log found."
+          make -j$(nproc)
