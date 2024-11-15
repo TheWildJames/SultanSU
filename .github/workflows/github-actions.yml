@@ -1,4 +1,4 @@
-name: GitHub Actions Kernel Build Demo
+name: GitHub Actions Kernel Build Debugging
 run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
 
 on:
@@ -7,14 +7,14 @@ on:
 jobs:
   Build-Kernel:
     runs-on: ubuntu-latest
-    timeout-minutes: 60  # Extend if needed for large builds
+    timeout-minutes: 60
     steps:
       - name: Update and Install Dependencies
         run: |
           set -ex
           echo "Updating package lists and installing necessary dependencies..."
           sudo apt update
-          sudo apt install -y build-essential bc bison flex libncurses5-dev libssl-dev gcc-aarch64-linux-gnu lz4 zip
+          sudo apt install -y build-essential bc bison flex libncurses5-dev libssl-dev gcc-aarch64-linux-gnu lz4 zip libelf-dev
           echo "Dependencies installed."
 
       - name: Clone Repositories
@@ -34,14 +34,27 @@ jobs:
           curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
           echo "KernelSU setup completed."
 
-      - name: Compile the Kernel
+      - name: Check Resources
+        run: |
+          echo "Checking disk space and memory availability..."
+          df -h
+          free -h
+          echo "Resources checked."
+
+      - name: Compile the Kernel with Detailed Logs
         run: |
           set -ex
           echo "Starting kernel compilation with limited threads to avoid memory issues..."
           cd android_kernel_google_zuma
           make zuma_defconfig
-          make -j2  # Limit threads to 2
-          echo "Kernel compilation completed successfully."
+          make -j2 2>&1 | tee build.log  # Save build log to check errors
+          echo "Kernel compilation completed."
+
+      - name: Display Build Log (if exists)
+        if: failure()
+        run: |
+          echo "Displaying the last 100 lines of the build log to diagnose the error."
+          tail -n 100 build.log || echo "No build log found."
 
       - name: Concatenate DTB Files
         run: |
